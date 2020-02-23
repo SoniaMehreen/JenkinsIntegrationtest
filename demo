@@ -1,0 +1,67 @@
+pipeline {
+	environment {
+		FOO = "foo"
+		def whenExists = fileExists 'When.txt'
+		def scriptExists = fileExists 'Script.txt'
+	}
+    agent any
+    stages {
+		stage('Test: When.txt exists') {
+			when { 
+				expression { whenExists == 'true' }
+			}
+			steps {			
+				bat "echo Does When.txt exist? ${whenExists}"				
+			}
+		}
+		stage('Test: Script.txt') {
+			steps {
+				script {
+                    if ( scriptExists == 'true') {
+                        echo 'Script.txt found'
+                    } else {						
+                        catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE') {
+							error 'Script.txt was not found'
+						}
+                    }
+                }
+			}
+			post {
+                success {
+                    script {
+                        echo "success"
+                    }
+                }
+                failure {
+                    script {
+                        echo "failure"
+                    }
+                }
+            }    
+		}
+		stage('Maven Build') {
+			steps {
+				dir("Selenium") {
+					bat "mvn clean install"
+				}
+			}				
+		}
+		stage('SeleniumTest') {
+			steps {
+				dir("Selenium/target") {
+					bat "java -jar Selenium-1.0-SNAPSHOT.jar"
+				}
+			}
+		}		
+		stage('2') {
+			steps {
+				echo 'Filler 2'
+			}
+		}		
+		stage('End of Pipeline') {
+			steps {
+				echo 'End of Pipeline'
+			}
+		}
+    }		
+}
